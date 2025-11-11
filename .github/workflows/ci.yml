@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**.swift"
+      - "**.yml"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-ci
+  cancel-in-progress: true
+
+env:
+  LOG_LEVEL: info
+  SWIFT_DETERMINISTIC_HASHING: 1
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:6.2-jammy
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Build
+        run: swift build --build-tests --configuration debug -Xswiftc -enable-testing -Xswiftc -warnings-as-errors -Xcc -Werror
+      - name: Run Tests
+        run: |
+          swift test --skip-build --configuration debug --disable-xctest
