@@ -59,6 +59,39 @@ if response.success {
 }
 ```
 
+## FirecrawlService (v2.8.0 – context-aware)
+
+For integrations that must **never hardcode API keys** (e.g. Supabase Edge, HIKARU Security Layer), use `FirecrawlService`. It reads the API key from the environment, adds retry with exponential backoff, and exposes v2.8.0 features: Spark model selection, parallel agents, and agent webhooks.
+
+```swift
+import Firecrawl
+
+// Set FIRECRAWL_API_KEY in your environment (e.g. Supabase secrets)
+let service = try FirecrawlService()
+
+// Scrape with format names
+let scrape = try await service.scrape(url: "https://example.com", formats: ["markdown", "html"])
+
+// Crawl with max depth
+let job: CrawlJob = try await service.crawl(url: "https://example.com", maxDepth: 2)
+
+// Agent with Spark model (Fast / Mini / Pro)
+let agentResult = try await service.agent(task: "Extract the main headline", model: .mini)
+
+// Map URLs, optionally bypassing cache
+let urls: [URL] = try await service.map(url: "https://example.com", ignoreCache: false)
+
+// Parallel agents (v2.8.0)
+let results = try await service.agentParallel(tasks: ["Task 1...", "Task 2..."], model: .fast)
+
+// Async agent with webhook
+let jobId = try await service.agentWithWebhook(
+    task: "Extract product data",
+    model: .pro,
+    webhook: AgentWebhook(url: "https://your-app.com/webhook", events: [.completed, .failed])
+)
+```
+
 ## Authentication
 
 Get your API key from [firecrawl.dev](https://firecrawl.dev) and initialize the client:

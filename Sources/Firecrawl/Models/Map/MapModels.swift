@@ -26,6 +26,9 @@ public struct MapRequest: Codable, Sendable {
     /// Location settings for the request
     public let location: LocationSettings?
 
+    /// Bypass cached results when mapping (v2.8.0).
+    public let ignoreCache: Bool?
+
     public init(
         url: String,
         search: String? = nil,
@@ -34,7 +37,8 @@ public struct MapRequest: Codable, Sendable {
         ignoreQueryParameters: Bool? = nil,
         limit: Int? = nil,
         timeout: Int? = nil,
-        location: LocationSettings? = nil
+        location: LocationSettings? = nil,
+        ignoreCache: Bool? = nil
     ) {
         self.url = url
         self.search = search
@@ -44,6 +48,7 @@ public struct MapRequest: Codable, Sendable {
         self.limit = limit
         self.timeout = timeout
         self.location = location
+        self.ignoreCache = ignoreCache
     }
 }
 

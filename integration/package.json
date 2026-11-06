@@ -1,0 +1,13 @@
+{
+  "name": "firecrawl-integration",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HIKARU Security Gate, GGWave, Spider–Firecrawl orchestration (TypeScript/Deno)",
+  "scripts": {
+    "test": "deno test tests/",
+    "test:integration": "deno test tests/integration/",
+    "test:security": "deno test tests/security/"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

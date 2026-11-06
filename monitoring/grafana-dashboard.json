@@ -1,0 +1,82 @@
+{
+  "title": "Firecrawl + HIKARU Security Gate",
+  "description": "Firecrawl API latency, Security Gate block rate, usage, GGWave errors",
+  "panels": [
+    {
+      "title": "Firecrawl API latency P50 / P95 / P99",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(firecrawl_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(firecrawl_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(firecrawl_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "title": "Parallel agent success rate",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(rate(firecrawl_agent_success_total[5m])) / sum(rate(firecrawl_agent_total[5m])) * 100",
+          "legendFormat": "Success %"
+        }
+      ]
+    },
+    {
+      "title": "Security Gate block rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(security_gate_blocks_total[5m])) / (sum(rate(security_gate_requests_total[5m])) + 1e-9) * 100",
+          "legendFormat": "Block %"
+        }
+      ]
+    },
+    {
+      "title": "Daily API cost per user (credits)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (user_id) (increase(firecrawl_credits_used_total[1d]))",
+          "legendFormat": "{{ user_id }}"
+        }
+      ]
+    },
+    {
+      "title": "GGWave transmission errors",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(increase(ggwave_decode_errors_total[1h]))",
+          "legendFormat": "Decode errors (1h)"
+        }
+      ]
+    },
+    {
+      "title": "SyberSpider crawl speed (pages/sec)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(spider_pages_crawled_total[5m])",
+          "legendFormat": "Pages/s"
+        }
+      ]
+    }
+  ],
+  "alerting": {
+    "conditions": [
+      { "name": "P95 latency > 200ms", "expr": "histogram_quantile(0.95, rate(firecrawl_request_duration_seconds_bucket[5m])) > 0.2" },
+      { "name": "Block rate > 10%", "expr": "sum(rate(security_gate_blocks_total[5m])) / sum(rate(security_gate_requests_total[5m])) > 0.1" },
+      { "name": "Success rate < 90%", "expr": "sum(rate(firecrawl_agent_success_total[5m])) / sum(rate(firecrawl_agent_total[5m])) < 0.9" },
+      { "name": "Cost per user > $2/day", "expr": "sum by (user_id) (increase(firecrawl_credits_used_total[1d])) * 0.001 > 2" }
+    ]
+  }
+}

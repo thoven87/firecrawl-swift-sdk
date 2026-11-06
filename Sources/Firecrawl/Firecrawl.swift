@@ -194,6 +194,41 @@ public final class FirecrawlClient: Sendable {
         return response
     }
 
+    // MARK: - Agent (v2.8.0)
+
+    /// Start an agent task for agentic data extraction (async; use webhook or poll status).
+    /// - Parameter request: Agent request (prompt, optional urls, model, webhook).
+    /// - Returns: Job id for polling or webhook correlation.
+    /// - Throws: FirecrawlError on failure
+    public func startAgent(_ request: AgentRequest) async throws -> AgentStartResponse {
+        logger.debug("Starting agent task")
+
+        let endpoint = "/v2/agent"
+        let response: AgentStartResponse = try await makeRequest(
+            method: .POST,
+            endpoint: endpoint,
+            body: request
+        )
+
+        return response
+    }
+
+    /// Get status and result of an agent job.
+    /// - Parameter jobId: The agent job ID from startAgent.
+    /// - Returns: Current status and data when completed.
+    /// - Throws: FirecrawlError on failure
+    public func getAgentStatus(_ jobId: String) async throws -> AgentStatusResponse {
+        logger.debug("Getting agent status for job: \(jobId)")
+
+        let endpoint = "/v2/agent/\(jobId)"
+        let response: AgentStatusResponse = try await makeGenericRequest(
+            method: .GET,
+            endpoint: endpoint
+        )
+
+        return response
+    }
+
     /// Search the web and scrape results
     /// - Parameter request: The search request parameters
     /// - Returns: The search results with scraped content
@@ -443,13 +478,61 @@ extension FirecrawlClient {
     ///   - url: The URL to map
     ///   - limit: Maximum number of URLs to return
     ///   - search: Search query to order results by relevance
+    ///   - ignoreCache: If true, bypass cached results (v2.8.0)
     /// - Returns: The list of URLs
     /// - Throws: FirecrawlError on failure
-    public func map(url: String, limit: Int? = nil, search: String? = nil) async throws
-        -> MapResponse
-    {
-        let request = MapRequest(url: url, search: search, limit: limit)
+    public func map(
+        url: String,
+        limit: Int? = nil,
+        search: String? = nil,
+        ignoreCache: Bool? = nil
+    ) async throws -> MapResponse {
+        let request = MapRequest(url: url, search: search, limit: limit, ignoreCache: ignoreCache)
         return try await map(request)
+    }
+
+    /// Run an agent task (prompt) with optional model and wait for completion via polling.
+    /// - Parameters:
+    ///   - task: The prompt describing what data to extract
+    ///   - model: Spark model (default .mini)
+    ///   - urls: Optional URLs to constrain the agent
+    ///   - pollInterval: Seconds between status checks
+    ///   - timeout: Maximum wait time in seconds
+    /// - Returns: AgentResponse with status and data when completed
+    /// - Throws: FirecrawlError on failure or timeout
+    public func agent(
+        task: String,
+        model: SparkModel = .mini,
+        urls: [String]? = nil,
+        pollInterval: TimeInterval = 2.0,
+        timeout: TimeInterval = 300.0
+    ) async throws -> AgentResponse {
+        let startResponse = try await startAgent(
+            AgentRequest(prompt: task, urls: urls, model: model)
+        )
+        guard let jobId = startResponse.id else {
+            throw FirecrawlError.invalidResponse("Agent start response missing id")
+        }
+
+        let startTime = Date()
+        while Date().timeIntervalSince(startTime) < timeout {
+            let statusResponse = try await getAgentStatus(jobId)
+
+            if statusResponse.status.isFinal {
+                return AgentResponse(
+                    success: statusResponse.status == .completed,
+                    jobId: jobId,
+                    status: statusResponse.status,
+                    model: statusResponse.model,
+                    data: statusResponse.data,
+                    creditsUsed: statusResponse.creditsUsed
+                )
+            }
+
+            try await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
+        }
+
+        throw FirecrawlError.unknown(408, "Agent job timed out after \(timeout) seconds")
     }
 
     /// Search the web with basic settings
