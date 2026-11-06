@@ -2,6 +2,10 @@
 
 A comprehensive Swift SDK for the [Firecrawl API v2](https://firecrawl.dev) - scrape, crawl, search, extract, and map websites with ease. Built for server-side Swift with full async/await support and Swift 6 compatibility.
 
+## Author Attribution
+
+The `SPYDER_GGWAVE` integration was originally implemented by **Sasha Smith** (GitHub: [@sashasmith-syber](https://github.com/sashasmith-syber)).
+
 [![Swift 6.0+](https://img.shields.io/badge/Swift-6.0+-orange.svg)](https://swift.org)
 [![Platforms](https://img.shields.io/badge/Platforms-macOS%20%7C%20Linux-lightgray.svg)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -57,6 +61,39 @@ let response = try await firecrawl.scrape(url: "https://example.com")
 if response.success {
     print("Content:", response.data?.markdown ?? "")
 }
+```
+
+## FirecrawlService (v2.8.0 – context-aware)
+
+For integrations that must **never hardcode API keys** (e.g. Supabase Edge, HIKARU Security Layer), use `FirecrawlService`. It reads the API key from the environment, adds retry with exponential backoff, and exposes v2.8.0 features: Spark model selection, parallel agents, and agent webhooks.
+
+```swift
+import Firecrawl
+
+// Set FIRECRAWL_API_KEY in your environment (e.g. Supabase secrets)
+let service = try FirecrawlService()
+
+// Scrape with format names
+let scrape = try await service.scrape(url: "https://example.com", formats: ["markdown", "html"])
+
+// Crawl with max depth
+let job: CrawlJob = try await service.crawl(url: "https://example.com", maxDepth: 2)
+
+// Agent with Spark model (Fast / Mini / Pro)
+let agentResult = try await service.agent(task: "Extract the main headline", model: .mini)
+
+// Map URLs, optionally bypassing cache
+let urls: [URL] = try await service.map(url: "https://example.com", ignoreCache: false)
+
+// Parallel agents (v2.8.0)
+let results = try await service.agentParallel(tasks: ["Task 1...", "Task 2..."], model: .fast)
+
+// Async agent with webhook
+let jobId = try await service.agentWithWebhook(
+    task: "Extract product data",
+    model: .pro,
+    webhook: AgentWebhook(url: "https://your-app.com/webhook", events: [.completed, .failed])
+)
 ```
 
 ## Authentication

@@ -1,0 +1,47 @@
+# GUARDIAN_STRATEGIST Protocol — Quarterly Dependency Audit
+# Scans dormant repos for Dependabot alerts every quarter
+# Best practices: pinned actions, minimal permissions, GITHUB_TOKEN scoped read-only
+
+name: Quarterly Dependency Audit
+
+on:
+  schedule:
+    # Runs at 00:00 UTC on the 1st of January, April, July, October
+    - cron: '0 0 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: read
+
+jobs:
+  scan-dormant-repos:
+    name: Scan Dormant Repos for Dependabot Alerts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run GUARDIAN_STRATEGIST dependency audit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_OR_USER: sashasmith-syber
+        run: python .github/scripts/guardian_audit.py
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-report-${{ github.run_number }}
+          path: audit-report.json
+          retention-days: 90

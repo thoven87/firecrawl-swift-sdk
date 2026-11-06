@@ -38,6 +38,9 @@ public enum FirecrawlError: Error, LocalizedError, Sendable {
     /// Unknown error with status code
     case unknown(Int, String?)
 
+    /// Configuration error (e.g. missing or invalid environment variable such as API key)
+    case configurationError(String)
+
     public var errorDescription: String? {
         switch self {
         case .networkError(let error):
@@ -69,6 +72,8 @@ public enum FirecrawlError: Error, LocalizedError, Sendable {
             return "Failed to encode request: \(error.localizedDescription)"
         case .unknown(let code, let message):
             return message ?? "Unknown error (\(code))"
+        case .configurationError(let message):
+            return "Configuration error: \(message)"
         }
     }
 }
